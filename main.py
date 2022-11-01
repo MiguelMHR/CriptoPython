@@ -19,6 +19,10 @@ class User:
         self.dni = dni
         self.password = password # lo he llamado así para evitar la ñ
         self.dinero = dinero
+        
+    def __str__(self):
+        """Funcion que se encarga de mostrar los datos del usuario"""
+        return f"Nombre: {self.nombre} {self.apellido1} {self.apellido2} \nDNI: {self.dni}\nDinero: {self.dinero}"
     
     def ingreso(self, dinero):
         """Funcion que se encarga de ingresar dinero a la cuenta"""
@@ -36,16 +40,19 @@ l_usuarios = []
 # TODO: pasar esto a una función creación de cuenta y llamarla desde aquí
 # TODO: crear una función de chequeo de parámetros introducidos por el usuario (no unitests pero basarse en software)
 # TODO: hacer funciones criptográficas para encriptar y desencriptar los datos y hashes
-for i in range(int(n_usuarios)):
-    nombre = input(f"Ingrese el nombre del usuario {i}: ")
-    apellido1 = input(f"Ingrese el primer apellido del usuario {i}: ")
-    apellido2 = input(f"Ingrese el segundo apellido del usuario {i}: ")
-    dni = input(f"Ingrese el DNI del usuario {i}: ")
-    password = input(f"Ingrese la contraseña del usuario {i}: ")
-    dinero= input(f"Ingrese la cantidad de dinero que desea ingresar en la cuenta del usuario {i}: ")
-    usuario = User(nombre, apellido1, apellido2, dni, password, dinero)
-    l_usuarios.append(usuario)
-    print("Usario creado con exito\n")
+# for i in range(int(n_usuarios)):
+#     nombre = input(f"Ingrese el nombre del usuario {i}: ")
+#     apellido1 = input(f"Ingrese el primer apellido del usuario {i}: ")
+#     apellido2 = input(f"Ingrese el segundo apellido del usuario {i}: ")
+#     dni = input(f"Ingrese el DNI del usuario {i}: ")
+#     password = input(f"Ingrese la contraseña del usuario {i}: ")
+#     dinero= input(f"Ingrese la cantidad de dinero que desea ingresar en la cuenta del usuario {i}: ")
+#     usuario = User(nombre, apellido1, apellido2, dni, password, dinero)
+#     l_usuarios.append(usuario)
+#     print("Usario creado con exito\n")
+
+usuario = User("Juan", "Perez", "Garcia", "12345678A", "1234", 1000)
+print(usuario)
 
 
     
