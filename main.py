@@ -1,4 +1,4 @@
-# Librerias que se usan
+###################     LIBRERIAS USADAS    #####################
 import json                                     # Libreria para manejar archivos JSON
 from Crypto.Random import get_random_bytes      # Funciones para la generación de clave
 from Crypto.Hash import HMAC, SHA256            # Funciones para el manejo de HMAC
@@ -49,8 +49,17 @@ class User():
         self.dinero += dinero
         
     def retiro(self, dinero):
-        """Funcion que se encarga de retirar dinero de la cuenta"""
-        self.dinero -= dinero
+        """
+        Funcion que se encarga de retirar dinero de la cuenta
+        Si hay suficiente dinero, se retira y se devuelve True
+        Si falta dinero, se devuelve False y se printea un mensaje de error
+        """
+        if dinero <= self.dinero:
+            self.dinero -= dinero
+            return True
+        else:
+            print("No tiene suficiente dinero en su cuenta")
+            return False	
     
     def classtodict(self):
         """Funcion que convierte la clase en un diccionario"""
@@ -276,7 +285,11 @@ def transaccion(user, usuario_a_transferir):
         # Si el mensaje es el mismo, se ha realizado la transacción segura correctamente
         print("\nTransacción protegida correctamente")
         # Realizamos las operaciones de dinero
-        user.retiro(float(dinero_a_enviar))
+        if not user.retiro(float(dinero_a_enviar)):
+            # Si no se ha podido realizar el retiro, se muestra un mensaje de error
+            print("\nNo se puede realizar la transferencia")
+            return
+        # Si se ha podido realizar el retiro, se realiza el ingreso
         usuario_a_transferir.ingreso(float(dinero_a_enviar))
         # Actualizamos el JSON de cuentas
         with open(r_cuentas, "r", encoding="utf-8") as f:
