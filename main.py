@@ -89,37 +89,62 @@ def validar_param_cuenta(nombre, apellido, dni, dinero):
     """Funcion que valida los parámetros de la cuenta"""
 
     # Cadenas comparativas de caracteres
-    letras = "abcdefghijklmnñopqrstuvwxyzABCDEFGHIJKLMNÑOPQRSTUVWXYZ"
-    numeros_y_coma = "0123456789,"
-    numeros_DNI = "0123456789"
-    dni_letras = "TRWAGMYFPDXBNJZSQVHLCKE"
+    letras_min = ("a","b","c","d","e","f","g","h","i","j","k", "l","m","n","ñ","o","p","q","r","s","t","u","v","w","x","y","z")
+    letras_mayus = ("A","B","C","D","E","F","G","H","I","J","K","L","M","N","Ñ","O","P","Q","R","S","T","U","V","W","X","Y","Z")
+    numeros_y_punto = ("0","1","2","3","4","5","6","7","8","9",".")
+    numeros_DNI = ("0","1","2","3","4","5","6","7","8","9")
+    dni_letras = ("T","R","W","A","G","M","Y","F","P","D","X","B","N","J","Z","S","Q","V","H","L","C","K","E")
+    
+    # Bucle de comprobación de nombre
+    for i in range(len(nombre)):
+        if ((nombre[i] not in letras_min) and (nombre[i] not in letras_mayus)) or (nombre[i] == " "):
+            print("Nombre no válido")
+            return False
 
     # validación del nombre
-    if (len(nombre) == 0) or (nombre[0].islower()) or (" " in nombre) or (not letras in nombre):
+    if (len(nombre) == 0) or (nombre[0].islower()):
         print("Nombre no válido")
         return False
 
+    # Bucle de comprobación de apellido
+    for elem in apellido:
+        if ((apellido[i] not in letras_min) and (apellido[i] not in letras_mayus)) or (elem == " "):
+            print("Apellido no válido")
+            return False
     # validación del apellido
-    if (type(apellido) != str) or (len(apellido) == 0) or (apellido[0].islower()) or (" " in apellido) or (not letras in apellido):
+    if (len(apellido) == 0) or (apellido[0].islower()):
         print("Apellido no válido")
         return False
-
+    
+    # Bucle de comprobación de DNI
+    for i in range(len(dni)):
+        if i == 8:
+            if dni[i] not in dni_letras:
+                print("DNI no válido")
+                return False
+        else:
+            if dni[i] not in numeros_DNI:
+                print("DNI no válido")
+                return False
     # validación del DNI
-    if (len(dni) != 9) or (dni[8] not in dni_letras) or ((dni[0:7]) not in numeros_DNI):
+    if (len(dni) != 9):
         print("DNI no valido")
         return False
 
-    # Bucle para comprobar que solo hay una coma en el dinero
+    # Bucle para comprobar que solo hay un punto en el dinero
     counter_puntos = 0
     for elem in dinero:
-        if elem == ",":
-            counter_comas += 1
-    if counter_comas > 1:
+        if elem == ".":
+            counter_puntos += 1
+        if elem not in numeros_y_punto:
+            print("Dinero no válido")
+            return False
+    if counter_puntos > 1:
         print("Dinero no válido")
         return False
 
     # validación del dinero
-    if (float(dinero) < 0) or ((not numeros_y_coma in dinero) and ((dinero[0] != ",")) and (dinero[-1] != ",")):
+    if (dinero[0] == ".") or (dinero[-1] == "."):
         print("Dinero no válido")
         return False
 
@@ -129,10 +154,15 @@ def validar_param_cuenta(nombre, apellido, dni, dinero):
 
 def comprobacion_parametros_password(password, PIN):
     """Función que valida la contraseña y el pin"""
-    numeros = "0123456789"
+    numeros = ("0","1","2","3","4","5","6","7","8","9")
     
+    # Bucle de validación de PIN
+    for elem in PIN:
+        if elem not in numeros:
+            print("PIN no válido")
+            return False
     # validación del PIN
-    if (len(PIN) != 8) or (PIN not in numeros):
+    if (len(PIN) != 8):
         print("El PIN no es válido")
         return False
 
@@ -183,7 +213,7 @@ def creacion_cuenta():
     nombre = input("Por favor, ingrese su nombre: ")
     apellido = input("Por favor, ingrese su apellido: ")
     DNI = input("Por favor, ingrese su DNI: ")
-    dinero = input("Por favor, ingrese el dinero que desea depositar: ")
+    dinero = input("Por favor, ingrese el dinero que desea depositar (formato n.n): ")
     # Si los datos introducidos son erroneos, se vuelve a pedir la información
     if not validar_param_cuenta(nombre, apellido, DNI, dinero):
         print("No se ha podido crear la cuenta")
@@ -203,8 +233,6 @@ def creacion_cuenta():
         print("\nNo se ha podido crear la cuenta")	
         print("\nVuelve a intentarlo")	
 
-# TODO: Lectura final de revisión
-# TODO: Probar el código
 
 def inicio_sesion():
     """
@@ -251,7 +279,7 @@ def inicio_sesion():
             hashed_password = hash.hexdigest()
             if elem["password"] == hashed_password:
                 password_found = True
-                print("\nInicio de sesión exitoso")
+                print("\nInicio de sesión exitoso\n")
     if not password_found:
         # Si no se ha encontrado la contraseña, se muestra un mensaje de error y se vuelve al bucle principal
         print("\nContraseña o PIN incorrecto")
@@ -260,13 +288,14 @@ def inicio_sesion():
     # Retornamos el usuario y un booleano que indica si se ha logueado
     l_results = [user, password_found]
     return l_results
-        
+   
+     
 def transaccion(user, usuario_a_transferir):
     """
     Funcion que se encarga de realizar la transaccion
     """
     # Pedimos el dinero de la transacción, que va a ser el mensaje a encriptar
-    dinero_a_enviar = input("\nPor favor, ingrese el dinero que desea enviar: ")
+    dinero_a_enviar = input("\nPor favor, ingrese el dinero que desea enviar (formato n.n): ")
     
     #####    Encriptación de la transacción    ######
     # Convertimos el dinero a enviar a binario -> es lo mismo que usar bytearray
@@ -283,7 +312,7 @@ def transaccion(user, usuario_a_transferir):
     mnsj = mnsj_bin.decode("utf-8")                              
     if mnsj == dinero_a_enviar:
         # Si el mensaje es el mismo, se ha realizado la transacción segura correctamente
-        print("\nTransacción protegida correctamente")
+        print("\nTransacción protegida correctamente\n")
         # Realizamos las operaciones de dinero
         if not user.retiro(float(dinero_a_enviar)):
             # Si no se ha podido realizar el retiro, se muestra un mensaje de error
@@ -295,10 +324,10 @@ def transaccion(user, usuario_a_transferir):
         with open(r_cuentas, "r", encoding="utf-8") as f:
             l_users = json.load(f)
             for elem in l_users:
-                if elem["DNI"] == user.get_DNI():
-                    elem["dinero"] = user.get_dinero()
-                elif elem["DNI"] == usuario_a_transferir.get_DNI():
-                    elem["dinero"] = usuario_a_transferir.get_dinero() 
+                if elem["DNI"] == user.DNI:
+                    elem["dinero"] = user.dinero
+                elif elem["DNI"] == usuario_a_transferir.DNI:
+                    elem["dinero"] = usuario_a_transferir.dinero
             f.close()
         with open(r_cuentas, "w", encoding="utf-8", newline="") as f:
             json.dump(l_users, f, indent=2) 
@@ -353,6 +382,9 @@ while(not exit_program):
         print("\nGracias por usar el programa\n")
         exit_program = True
     
+    else:
+        print("\nPor favor, seleccione una opción válida")
+    
     while(enter_sys):
         # Mientras queramos hacer transacciones, se ejecuta el programa para encontrar al usuario a transferir
         usuario_a_transferir = input("\nPor favor, ingrese el DNI del usuario al que desea transferir dinero: ")
@@ -379,18 +411,3 @@ while(not exit_program):
                     print("\nGracias por usar el programa\n")
                     enter_sys = False
                     exit_program = True
-
-
-
-
-
-
-
-
-
-    
-    
-
-
-
-
