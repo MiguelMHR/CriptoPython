@@ -2,6 +2,7 @@
 import json                                     # Libreria para manejar archivos JSON
 from Crypto.Random import get_random_bytes      # Funciones para la generación de clave
 from Crypto.Hash import HMAC, SHA256            # Funciones para el manejo de HMAC
+from Crypto.Cipher import AES                   # Funciones para el manejo de AES
 from pathlib import Path                        # Función para los paths del JSON
 
 """
@@ -26,7 +27,7 @@ User: Nombre, Apellido, DNI, contraseña, PIN, dinero, clave (en este caso solo 
 
 class User():
     # Se genera la clave publica válida para todos los usuarios
-    common_key = get_random_bytes(16)
+    common_key = get_random_bytes(16)                               # Clave publica 
     def __init__(self, nombre, apellido, DNI, dinero):
         self.nombre = nombre
         self.apellido = apellido
@@ -36,6 +37,10 @@ class User():
     
     def __str__(self):
         return f"Nombre: {self.nombre} {self.apellido} \nDNI: {self.DNI} \nDinero: {self.dinero}"
+    
+    def get_common_key(self):
+        """Funcion que devuelve la clave publica"""
+        return self.__common_key
 
     def ingreso(self, dinero):
         """Funcion que se encarga de ingresar dinero a la cuenta"""
@@ -142,27 +147,26 @@ def inicio_sesion():
 def transaccion(user, usuario_a_transferir):
     """
     Funcion que se encarga de realizar la transaccion
-    """   
-    # TODO: encriptar la cantidad de dinero a transferir
+    """
+    dinero_a_enviar = input("\nPor favor, Ingrese el dinero que desea enviar: ")
+    # Encriptación de la transacción -> dinero a enviar
+    bin_dinero = dinero_a_enviar.encode("utf-8")    # Convertimos el dinero a enviar a binario -> es lo mismo que usar bytearray
+    clave = user.get_common_key()                   # Obtenemos la clave pública del usuario que envía el dinero -> Está ya en bytearray
+    encriptacion = AES.new(clave, AES.MODE_CTR)     # Creamos el objeto AES con la clave pública y el modo CTR (Counter mode) -> más recomendable
+    enc_datos = encriptacion.encrypt(bin_dinero)    # Encriptamos los datos
+    decriptacion = AES.new(clave, AES.MODE_CTR, nonce=encriptacion.nonce)
+    mnsj_bin = decriptacion.decrypt(enc_datos)      # Desencriptamos los datos
+    mnsj = mnsj_bin.decode("utf-8")                 # Convertimos el mensaje a string
+    if mnsj == dinero_a_enviar:
+        print("\nTransacción protegida correctamente")
+        user.retiro(dinero_a_enviar)
+        usuario_a_transferir.ingreso(dinero_a_enviar)
+    else:
+        print("\nError en la transacción")
+        return
     
     
-
-
-
-
     
-
-# def inicio_sesion():
-#     
-#     print("Bienvenido a la sesion de inicio de cuenta`\n")
-#     DNI = input("Por favor, Ingrese su DNI: ")
-#     password = input("Por favor, Ingrese su contraseña: ")
-#     PIN = input("Por favor, Ingrese su PIN (8 dígitos numéricos): ")
-
-#     return usuario
-
-# def transaccion(usuario_emisor, usuario_receptor, dinero):
-#     """Funcion que se encarga de realizar una transaccion entre dos usuarios"""
 
 
 while(not exit_program):
