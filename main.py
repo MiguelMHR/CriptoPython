@@ -164,8 +164,7 @@ def transaccion(user, usuario_a_transferir):
     else:
         print("\nError en la transacción")
         return
-    
-    
+        
     
 
 
@@ -206,6 +205,12 @@ while(not exit_program):
             continue
         if user_found:    
             transaccion(init_user, transfer_user)
+            if (input("\n¿Desea realizar otra transacción? (s/n): ") == "n"):
+                enter_sys = False
+                if (input("\n¿Desea salir del programa? (s/n): ") == "s"):
+                    print("\nGracias por usar el programa\n")
+                    enter_sys = False
+                    exit_program = True
 
 
 # TODO: Al final del programa cerrar el archivo JSON y borrarlo
