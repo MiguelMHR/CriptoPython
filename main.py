@@ -5,6 +5,8 @@ from Crypto.Hash import HMAC, SHA256            # Funciones para el manejo de HM
 from Crypto.Cipher import AES                   # Funciones para el manejo de AES
 from pathlib import Path                        # Función para los paths del JSON
 
+
+###################    MANEJO DE JSONS    ###################
 """
 # TODO: Cambiar rutas antes de presentar trabajo
 CUIDADO, esta ruta está definida para nuestro equipo
@@ -14,10 +16,6 @@ r_cuentas y en r_passwords
 home = str(Path.home())
 r_cuentas = home + "\ClonedRepositories\CriptoPython\cuentas.json"               # Ruta raw del JSON de cuentas de usuarios
 r_passwords = home + "\ClonedRepositories\CriptoPython\passwords.json"           # Ruta raw del JSON de contraseñas
-
-
-enter_sys = False                                             # Variable que controla la autenticación del usuario en el sistema
-exit_program = False                                          # Variable que controla el cierre del programa
 
 
 ###################     CLASE USER, MÉTODOS ASOCIADOS Y FUNCIONES EXTERNAS   ########################
@@ -149,7 +147,7 @@ def crearpasswordsJSON(dni):
         print("No se han podido crear los datos de seguridad")
         return False
     
-    # Implementación de HMAC para la contraseña
+    #############    HMAC    ##################
     # Pasamos las dos contraseñas a bytes
     secret = bytearray(password, encoding='utf8')
     key = bytearray(PIN, encoding='utf8')
@@ -196,7 +194,6 @@ def creacion_cuenta():
         print("\nNo se ha podido crear la cuenta")	
         print("\nVuelve a intentarlo")	
 
-# TODO: Comentar bien lo que queda 
 # TODO: Lectura final de revisión
 # TODO: Probar el código
 
@@ -225,7 +222,7 @@ def inicio_sesion():
             user = User(elem["nombre"], elem["apellido"], elem["DNI"], elem["dinero"])
             user_found = True
     if not user_found:
-        # Si no se ha encontrado el usuario, se muestra un mensaje de error y se vuelve al buclee principal
+        # Si no se ha encontrado el usuario, se muestra un mensaje de error y se vuelve al bucle principal
         print("\nEl usuario no existe")
         # l_results[0] -> usuario (en este caso None porque no existe) y l_results[1] -> booleano que indica si se ha logueado
         l_results = [None, False]
@@ -247,6 +244,7 @@ def inicio_sesion():
                 password_found = True
                 print("\nInicio de sesión exitoso")
     if not password_found:
+        # Si no se ha encontrado la contraseña, se muestra un mensaje de error y se vuelve al bucle principal
         print("\nContraseña o PIN incorrecto")
         l_results = [None, False]
         return l_results
@@ -258,20 +256,29 @@ def transaccion(user, usuario_a_transferir):
     """
     Funcion que se encarga de realizar la transaccion
     """
-    dinero_a_enviar = input("\nPor favor, Ingrese el dinero que desea enviar: ")
-    # Encriptación de la transacción -> dinero a enviar
-    bin_dinero = dinero_a_enviar.encode("utf-8")    # Convertimos el dinero a enviar a binario -> es lo mismo que usar bytearray
-    clave = user.get_common_key()                   # Obtenemos la clave pública del usuario que envía el dinero -> Está ya en bytearray
-    encriptacion = AES.new(clave, AES.MODE_CTR)     # Creamos el objeto AES con la clave pública y el modo CTR (Counter mode) -> más recomendable
-    enc_datos = encriptacion.encrypt(bin_dinero)    # Encriptamos los datos
-    decriptacion = AES.new(clave, AES.MODE_CTR, nonce=encriptacion.nonce)
-    mnsj_bin = decriptacion.decrypt(enc_datos)      # Desencriptamos los datos
-    mnsj = mnsj_bin.decode("utf-8")                 # Convertimos el mensaje a string
+    # Pedimos el dinero de la transacción, que va a ser el mensaje a encriptar
+    dinero_a_enviar = input("\nPor favor, ingrese el dinero que desea enviar: ")
+    
+    #####    Encriptación de la transacción    ######
+    # Convertimos el dinero a enviar a binario -> es lo mismo que usar bytearray
+    bin_dinero = dinero_a_enviar.encode("utf-8")    
+    # Creamos el objeto AES con la clave del usuario emisor y el modo CTR (Counter mode) -> más recomendable
+    encriptacion = AES.new(user.get_common_key(), AES.MODE_CTR) 
+    # Encriptamos los datos
+    enc_datos = encriptacion.encrypt(bin_dinero)  
+    # Creamos el objeto AES con la clave del usuario receptor y el modo CTR (Counter mode) -> más recomendable
+    decriptacion = AES.new(usuario_a_transferir.get_common_key(), AES.MODE_CTR, nonce=encriptacion.nonce)
+    # Desencriptamos los datos
+    mnsj_bin = decriptacion.decrypt(enc_datos) 
+    # Convertimos el mensaje a string
+    mnsj = mnsj_bin.decode("utf-8")                              
     if mnsj == dinero_a_enviar:
+        # Si el mensaje es el mismo, se ha realizado la transacción segura correctamente
         print("\nTransacción protegida correctamente")
+        # Realizamos las operaciones de dinero
         user.retiro(float(dinero_a_enviar))
         usuario_a_transferir.ingreso(float(dinero_a_enviar))
-
+        # Actualizamos el JSON de cuentas
         with open(r_cuentas, "r", encoding="utf-8") as f:
             l_users = json.load(f)
             for elem in l_users:
@@ -283,52 +290,75 @@ def transaccion(user, usuario_a_transferir):
         with open(r_cuentas, "w", encoding="utf-8", newline="") as f:
             json.dump(l_users, f, indent=2) 
             f.close()  
-
-        user.dicttoJSON(usuario_a_transferir.classtodict(), r_cuentas)
+        print("\nTransacción realizada correctamente")
     else:
+        # Si el mensaje no es el mismo, se ha producido un error en la encriptación
         print("\nError en la transacción")
         return
         
     
 
 #################################                 MAIN PROGRAM                 ##############################################
+"""
+En esta sección de código se ejecuta el programa principal
+Tenemos dos loops controlados por las variables globales enter_sys y exit_program
+enter_sys -> controla el acceso al sistema de transacciones
+exit_program -> controla la salida del programa
+Inicializadas a False, se vuelven True cuando se accede al sistema o se sale del programa
+Esto permite que el programa se ejecute hasta que el usuario decida salir y tengamos
+una interacción óptima con el usuario mediante la terminal
+"""
+
+enter_sys = False
+exit_program = False
+
 while(not exit_program):
+    # Mientras no se haya salido del programa, se ejecuta el programa
     print("\nBienvenido a la simulación de la banca en linea\n")
     init_oper = input("Por favor, seleccione el método de entrada al sistema ('crear cuenta', 'iniciar sesión' o 'salir'): ")
     if init_oper == "crear cuenta":
-        """Si se selecciona iniciar sesión, se invoca a la función de inicio de sesión"""
+        # Si se selecciona 'crear cuenta', se invoca a la función de creación de cuenta
         creacion_cuenta()
-    
+        # Una vez creada la cuenta ya se puede iniciar sesión
     elif init_oper == "iniciar sesión":
+        # Si se selecciona 'iniciar sesión', se invoca a la función de inicio de sesión
         l_results = inicio_sesion()
         if l_results[1]:
+            # Si se devuelve true en inicio_sesión, se ha logueado correctamente
             print("\nBienvenido a la sección de transacciones\n")
+            # Creamos un objeto usuario con los datos del usuario logueado
             init_user = l_results[0]
+            # Podemos acceder a las transacciones
             enter_sys = True
         else:
+            # Si se devuelve false en inicio_sesión, no se ha logueado correctamente, por lo que no se puede acceder a las transacciones
             print("\nNo se pudo iniciar sesión")
             print("\nPor favor, vuelva a intentarlo")
-            continue
-        
-        
+              
     elif init_oper == "salir":
+        # Si se selecciona 'salir', se sale del programa y no se entra a las transacciones
         print("\nGracias por usar el programa\n")
         exit_program = True
     
     while(enter_sys):
+        # Mientras queramos hacer transacciones, se ejecuta el programa para encontrar al usuario a transferir
         usuario_a_transferir = input("\nPor favor, ingrese el DNI del usuario al que desea transferir dinero: ")
         with open(r_cuentas, "r", encoding="utf-8") as f:
+            # Abrimos el JSON de cuentas para encontrar al destinatario
             l_users = json.load(f)
             f.close()
+        # Creamos el booleano para saber si se ha encontrado al usuario
         user_found = False
         for elem in l_users:
             if elem["DNI"] == usuario_a_transferir:
+                # Si coinciden los DNI, se ha encontrado al usuario y se crea el segundo user
                 user_found = True
                 transfer_user = User(elem["nombre"], elem["apellido"], elem["DNI"], elem["dinero"])
         if not user_found:
+            # Si no se encuentra, se volverá a ejecutar la transacción
             print("\nEl usuario a transferir no existe")
             continue
-        if user_found:    
+        else:    
             transaccion(init_user, transfer_user)
             if (input("\n¿Desea realizar otra transacción? (s/n): ") == "n"):
                 enter_sys = False
@@ -336,6 +366,7 @@ while(not exit_program):
                     print("\nGracias por usar el programa\n")
                     enter_sys = False
                     exit_program = True
+
 
 
 
