@@ -21,28 +21,38 @@ r_passwords = home + "\clonedRepos\CriptoPython"             # Ruta raw del JSON
 ###################     CLASE USER, MÉTODOS ASOCIADOS Y FUNCIONES EXTERNAS   ########################
 
 #TODO: Crear aquí las claves privada y pública QUE TENDRÁ EL BANCO, mirar foto: https://cutt.ly/n1FyLT3
+# video YT asimétrico + clave pública: https://www.youtube.com/watch?v=apn1BN6XMVo
+# Usar RSA: https://pythondiario.com/2020/07/criptografia-en-python-rsa.html
+# Aunque dicen que ECC mejor -> mirar link abajo
+# https://securityboulevard.com/2020/05/types-of-encryption-5-encryption-algorithms-how-to-choose-the-right-one/
+# ELEGIR EL MEJOR: RSA PUESTO QUE ES EL MÁS USADO Y SIMPLE Y POR LA IMPLEMENTACION CON PKI (ECC ES MÁS SEGURO PERO MENOS USADO)
 # Luego, ciframos con asimétrico la clave que se usará en simétrico para cifrar los datos de la cuenta
 # El usuario tiene la clave simétrica y se la tiene que mandar al banco con asimétrico para que
-# el banco pueda hacer el cifrado simétrico de la parte 1   
+# el banco pueda hacer el cifrado simétrico de la parte 1
+
+### CLAVES CIFRADO ASIMÉTRICO -> LAS TIENE EL BANCO ###
+public_key = get_random_bytes(16) 
+private_key = get_random_bytes(16)  
 
 class User():
     """
     Clase para crear un usuario
     User: Nombre, Apellido, DNI, dinero, clave oculta (en este caso solo se necesita una clave común)
     """
+    
     # Se genera la clave válida para todos los usuarios -> cifrado simétrico
-    common_key = get_random_bytes(16)                    # Clave en bytearray 
+    msg_key = get_random_bytes(16)                    # Clave en bytearray 
     def __init__(self, nombre, apellido, DNI, dinero):
         self.nombre = nombre            # Nombre -> string sin espacios con el primer caracter en mayúscula                 
         self.apellido = apellido        # Apellido -> string sin espacios con el primer caracter en mayúscula
         self.DNI = DNI                  # DNI -> string de 8 caracteres integers con el último caracter en mayúscula
         self.dinero = float(dinero)     # Dinero -> float positivo
-        self.__common_key = User.common_key  # Mensaje que se debe codificar para el cifrado asimétrico
+        self.__msg_key = User.msg_key   # Mensaje que se debe codificar para el cifrado asimétrico
     
     def __str__(self):
         return f"Nombre: {self.nombre} {self.apellido} \nDNI: {self.DNI} \nDinero: {self.dinero}"
     
-    def get_common_key(self):
+    def get_msg_key(self):
         """
         Funcion que devuelve la clave publica
         Necesario para la ocultación de la clave
