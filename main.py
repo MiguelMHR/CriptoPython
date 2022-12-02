@@ -14,8 +14,8 @@ para que funcione en su equipo, debe cambiarlo a su ruta absoluta de los JSON en
 r_cuentas y en r_passwords
 """
 home = str(Path.home())
-r_cuentas = home + "\Onedrive\Escritorio\CriptoPython\cuentas.json"               # Ruta raw del JSON de cuentas de usuarios
-r_passwords = home + "\Onedrive\Escritorio\CriptoPython\passwords.json"           # Ruta raw del JSON de contraseñas
+r_cuentas = home + "\clonedRepos\CriptoPython"               # Ruta raw del JSON de cuentas de usuarios
+r_passwords = home + "\clonedRepos\CriptoPython"             # Ruta raw del JSON de contraseñas
 
 
 ###################     CLASE USER, MÉTODOS ASOCIADOS Y FUNCIONES EXTERNAS   ########################
