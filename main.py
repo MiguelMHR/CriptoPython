@@ -20,19 +20,24 @@ r_passwords = home + "\clonedRepos\CriptoPython"             # Ruta raw del JSON
 
 ###################     CLASE USER, MÉTODOS ASOCIADOS Y FUNCIONES EXTERNAS   ########################
 
+#TODO: Crear aquí las claves privada y pública QUE TENDRÁ EL BANCO, mirar foto: https://cutt.ly/n1FyLT3
+# Luego, ciframos con asimétrico la clave que se usará en simétrico para cifrar los datos de la cuenta
+# El usuario tiene la clave simétrica y se la tiene que mandar al banco con asimétrico para que
+# el banco pueda hacer el cifrado simétrico de la parte 1   
+
 class User():
     """
     Clase para crear un usuario
     User: Nombre, Apellido, DNI, dinero, clave oculta (en este caso solo se necesita una clave común)
     """
     # Se genera la clave válida para todos los usuarios -> cifrado simétrico
-    common_key = get_random_bytes(16)                   # Clave en bytearray 
+    common_key = get_random_bytes(16)                    # Clave en bytearray 
     def __init__(self, nombre, apellido, DNI, dinero):
         self.nombre = nombre            # Nombre -> string sin espacios con el primer caracter en mayúscula                 
         self.apellido = apellido        # Apellido -> string sin espacios con el primer caracter en mayúscula
         self.DNI = DNI                  # DNI -> string de 8 caracteres integers con el último caracter en mayúscula
         self.dinero = float(dinero)     # Dinero -> float positivo
-        self.__common_key = User.common_key
+        self.__common_key = User.common_key  # Mensaje que se debe codificar para el cifrado asimétrico
     
     def __str__(self):
         return f"Nombre: {self.nombre} {self.apellido} \nDNI: {self.DNI} \nDinero: {self.dinero}"
