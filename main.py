@@ -3,6 +3,7 @@ import json                                     # Libreria para manejar archivos
 from Crypto.Random import get_random_bytes      # Funciones para la generación de clave
 from Crypto.Hash import HMAC, SHA256            # Funciones para el manejo de HMAC
 from Crypto.Cipher import AES                   # Funciones para el manejo de AES
+from Crypto.PublicKey import RSA                # Funciones de la generación de claves asimétrico
 from pathlib import Path                        # Función para los paths del JSON
 
 
@@ -14,8 +15,8 @@ para que funcione en su equipo, debe cambiarlo a su ruta absoluta de los JSON en
 r_cuentas y en r_passwords
 """
 home = str(Path.home())
-r_cuentas = home + "\clonedRepos\CriptoPython"               # Ruta raw del JSON de cuentas de usuarios
-r_passwords = home + "\clonedRepos\CriptoPython"             # Ruta raw del JSON de contraseñas
+r_cuentas = home + "\ClonedRepositories\CriptoPython"               # Ruta raw del JSON de cuentas de usuarios
+r_passwords = home + "\ClonedRepositories\CriptoPython"             # Ruta raw del JSON de contraseñas
 
 
 ###################     CLASE USER, MÉTODOS ASOCIADOS Y FUNCIONES EXTERNAS   ########################
@@ -30,24 +31,21 @@ r_passwords = home + "\clonedRepos\CriptoPython"             # Ruta raw del JSON
 # El usuario tiene la clave simétrica y se la tiene que mandar al banco con asimétrico para que
 # el banco pueda hacer el cifrado simétrico de la parte 1
 
-### CLAVES CIFRADO ASIMÉTRICO -> LAS TIENE EL BANCO ###
-public_key = get_random_bytes(16) 
-private_key = get_random_bytes(16)  
+
 
 class User():
     """
     Clase para crear un usuario
-    User: Nombre, Apellido, DNI, dinero, clave oculta (en este caso solo se necesita una clave común)
+    User: Nombre, Apellido, DNI, dinero, clave oculta (clave de cada usuario usada en cifrado simétrico)
     """
-    
-    # Se genera la clave válida para todos los usuarios -> cifrado simétrico
-    msg_key = get_random_bytes(16)                    # Clave en bytearray 
+       
     def __init__(self, nombre, apellido, DNI, dinero):
-        self.nombre = nombre            # Nombre -> string sin espacios con el primer caracter en mayúscula                 
-        self.apellido = apellido        # Apellido -> string sin espacios con el primer caracter en mayúscula
-        self.DNI = DNI                  # DNI -> string de 8 caracteres integers con el último caracter en mayúscula
-        self.dinero = float(dinero)     # Dinero -> float positivo
-        self.__msg_key = User.msg_key   # Mensaje que se debe codificar para el cifrado asimétrico
+        self.nombre = nombre                    # Nombre -> string sin espacios con el primer caracter en mayúscula                 
+        self.apellido = apellido                # Apellido -> string sin espacios con el primer caracter en mayúscula
+        self.DNI = DNI                          # DNI -> string de 8 caracteres integers con el último caracter en mayúscula
+        self.dinero = float(dinero)             # Dinero -> float positivo
+        self.__msg_key = get_random_bytes(16)   # Mensaje que se debe codificar para el cifrado asimétrico -> Clave en bytearray 
+        self.public_key = public_key            # Clave pública del banco que también poseen los usuarios -> Clave en bytearray
     
     def __str__(self):
         return f"Nombre: {self.nombre} {self.apellido} \nDNI: {self.DNI} \nDinero: {self.dinero}"
@@ -79,6 +77,14 @@ class User():
     def classtodict(self):
         """Funcion que convierte la clase en un diccionario"""
         return {"nombre": self.nombre, "apellido": self.apellido, "DNI": self.DNI, "dinero": self.dinero}
+
+def cifrado_asimetrico(user):
+    """
+    Funcion que se encarga de cifrar la clave simétrica del usuario con la clave pública del banco
+    """
+    ####  CIFRADO ASIMÉTRICO  ####
+    claves = RSA.generate(2048)       # Generamos las claves -> 2048 bits -> 256 bytes
+    
     
 
 def dicttoJSON(dict, ruta_json):
