@@ -34,16 +34,21 @@ r_passwords = home + "\ClonedRepositories\CriptoPython"             # Ruta raw d
 asym_keys = RSA.generate(2048)                                                   # Generamos las claves -> 2048 bits -> 256 bytes
 pin_bank = input("Por favor, introduzca el PIN privado del banco: ")             # PIN del banco
 
+#TODO: Hashear el pin del banco, meterlo en el JSON y luego comparar con el que se introduce
+# LINK DE INTERÉS: https://es.stackoverflow.com/questions/162038/c%C3%B3mo-puedo-crear-una-llave-p%C3%BAblica-y-otra-privada-con-rsa-pycryptodome
+# with open("pin_bank.json", "wb") as f:
+
 # Guardamos las claves en ficheros distintos
 # El fichero de la clave pública se guarda en formato PEM sin protección
 # El fichero de la clave privada se guarda en formato PEM con protección mediante el PIN del banco
 private_rsa = asym_keys.export_key(passphrase=pin_bank)
 with open("private_rsa.pem", "wb") as f:
     f.write(private_rsa)
-with open("pin_bank.pem", "wb") as f:
+    f.close()
 public_rsa = asym_keys.publickey().export_key()
 with open("public_rsa.pem", "wb") as f:
     f.write(public_rsa)
+    f.close()
     
 
 class User():
