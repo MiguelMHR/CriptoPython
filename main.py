@@ -4,6 +4,7 @@ from Crypto.Random import get_random_bytes      # Funciones para la generación 
 from Crypto.Hash import HMAC, SHA256            # Funciones para el manejo de HMAC
 from Crypto.Cipher import AES                   # Funciones para el manejo de AES
 from Crypto.PublicKey import RSA                # Funciones de la generación de claves asimétrico
+from Crypto.Cipher import PKCS1_OAEP            # Funciones para el manejo de las claves asimétricos
 from pathlib import Path                        # Función para los paths del JSON
 
 
@@ -24,14 +25,26 @@ r_passwords = home + "\ClonedRepositories\CriptoPython"             # Ruta raw d
 #TODO: Crear aquí las claves privada y pública QUE TENDRÁ EL BANCO, mirar foto: https://cutt.ly/n1FyLT3
 # video YT asimétrico + clave pública: https://www.youtube.com/watch?v=apn1BN6XMVo
 # Usar RSA: https://pythondiario.com/2020/07/criptografia-en-python-rsa.html
-# Aunque dicen que ECC mejor -> mirar link abajo
+# LINK PARA REPORT:
 # https://securityboulevard.com/2020/05/types-of-encryption-5-encryption-algorithms-how-to-choose-the-right-one/
 # ELEGIR EL MEJOR: RSA PUESTO QUE ES EL MÁS USADO Y SIMPLE Y POR LA IMPLEMENTACION CON PKI (ECC ES MÁS SEGURO PERO MENOS USADO)
-# Luego, ciframos con asimétrico la clave que se usará en simétrico para cifrar los datos de la cuenta
-# El usuario tiene la clave simétrica y se la tiene que mandar al banco con asimétrico para que
-# el banco pueda hacer el cifrado simétrico de la parte 1
 
 
+### CLAVES PARA EL CIFRADO ASIMÉTRICO ###
+asym_keys = RSA.generate(2048)                                                   # Generamos las claves -> 2048 bits -> 256 bytes
+pin_bank = input("Por favor, introduzca el PIN privado del banco: ")             # PIN del banco
+
+# Guardamos las claves en ficheros distintos
+# El fichero de la clave pública se guarda en formato PEM sin protección
+# El fichero de la clave privada se guarda en formato PEM con protección mediante el PIN del banco
+private_rsa = asym_keys.export_key(passphrase=pin_bank)
+with open("private_rsa.pem", "wb") as f:
+    f.write(private_rsa)
+with open("pin_bank.pem", "wb") as f:
+public_rsa = asym_keys.publickey().export_key()
+with open("public_rsa.pem", "wb") as f:
+    f.write(public_rsa)
+    
 
 class User():
     """
@@ -40,22 +53,14 @@ class User():
     """
        
     def __init__(self, nombre, apellido, DNI, dinero):
-        self.nombre = nombre                    # Nombre -> string sin espacios con el primer caracter en mayúscula                 
-        self.apellido = apellido                # Apellido -> string sin espacios con el primer caracter en mayúscula
-        self.DNI = DNI                          # DNI -> string de 8 caracteres integers con el último caracter en mayúscula
-        self.dinero = float(dinero)             # Dinero -> float positivo
-        self.__msg_key = get_random_bytes(16)   # Mensaje que se debe codificar para el cifrado asimétrico -> Clave en bytearray 
-        self.public_key = public_key            # Clave pública del banco que también poseen los usuarios -> Clave en bytearray
+        self.nombre = nombre                                  # Nombre -> string sin espacios con el primer caracter en mayúscula                 
+        self.apellido = apellido                              # Apellido -> string sin espacios con el primer caracter en mayúscula
+        self.DNI = DNI                                        # DNI -> string de 8 caracteres integers con el último caracter en mayúscula
+        self.dinero = float(dinero)                           # Dinero -> float positivo
+        self.__sym_key_encrypted = self.cifrado_asimetrico()  # Mensaje encriptado con cifrado asimétrico -> Clave en bytearray 
     
     def __str__(self):
         return f"Nombre: {self.nombre} {self.apellido} \nDNI: {self.DNI} \nDinero: {self.dinero}"
-    
-    def get_msg_key(self):
-        """
-        Funcion que devuelve la clave publica
-        Necesario para la ocultación de la clave
-        """
-        return self.__common_key
 
     def ingreso(self, dinero):
         """Funcion que se encarga de ingresar dinero a la cuenta"""
@@ -78,13 +83,27 @@ class User():
         """Funcion que convierte la clase en un diccionario"""
         return {"nombre": self.nombre, "apellido": self.apellido, "DNI": self.DNI, "dinero": self.dinero}
 
-def cifrado_asimetrico(user):
-    """
-    Funcion que se encarga de cifrar la clave simétrica del usuario con la clave pública del banco
-    """
-    ####  CIFRADO ASIMÉTRICO  ####
-    claves = RSA.generate(2048)       # Generamos las claves -> 2048 bits -> 256 bytes
-    
+    def cifrado_asimetrico(self):
+        """
+        Funcion que cifra la clave simétrica con la clave pública del banco
+        """
+        ####  CIFRADO ASIMÉTRICO  ####
+        sym_key = get_random_bytes(16)                               # Mensaje que se debe codificar para el cifrado asimétrico -> Clave en bytearray 
+        public_rsa = RSA.import_key(open("public_rsa.pem").read())   # Clave pública del banco
+        cifrador_rsa = PKCS1_OAEP.new(public_rsa)                    # Cifrador asimétrico
+        sym_key_encrypted = cifrador_rsa.encrypt(sym_key.encode())   # Ciframos la clave simétrica con la clave pública del banco
+        return sym_key_encrypted
+
+    def descifrado_asimétrico(self):
+        """
+        Funcion que se encarga de descifrar la clave simétrica del usuario con la clave privada del banco
+        """
+        ####  DESCIFRADO ASIMÉTRICO  ####
+        pin_decode = input("")                              # PIN del banco en bytes
+        private_rsa = RSA.import_key(open("private_rsa.pem").read(), passphrase=pin_bank)  # Clave privada del banco
+        descifrador_rsa = PKCS1_OAEP.new(private_rsa)                                      # Descifrador asimétrico
+        msg_key_decrypted = descifrador_rsa.decrypt(self.__sym_key_encrypted)              # Desciframos la clave simétrica                                                      
+        return (msg_key_decrypted.decode())                                                # Devolvemos la clave simétrica en formato string
     
 
 def dicttoJSON(dict, ruta_json):
@@ -201,16 +220,16 @@ def crearpasswordsJSON(dni):
     # Recogida de datos inicial con la interacción de la terminal
     print("\nSección de seguridad\n")
     password = input("Por favor, ingrese su contraseña: ")               # A la contraseña se le aplica un Hash
-    PIN = input("Por favor, ingrese su PIN (8 dígitos numéricos): ")     # Permitirá iniciar sesión - 8 digitos
+    pin_user = input("Por favor, ingrese su PIN (8 dígitos numéricos): ")     # Permitirá iniciar sesión - 8 digitos
     # Si los parámetros no son válidos, devolvemos False
-    if not comprobacion_parametros_password(password, PIN):
+    if not comprobacion_parametros_password(password, pin_user):
         print("No se han podido crear los datos de seguridad")
         return False
     
     #############    HMAC    ##################
     # Pasamos las dos contraseñas a bytes
     secret = bytearray(password, encoding='utf8')
-    key = bytearray(PIN, encoding='utf8')
+    key = bytearray(pin_user, encoding='utf8')
     # Generamos el hash de la contraseña
     hash = HMAC.new(key, secret, SHA256)
     # Obtenemos el hash en forma legible
@@ -264,7 +283,7 @@ def inicio_sesion():
     print("\nBienvenido a la sección de inicio de sesión\n")
     DNI = input("Por favor, ingrese su DNI: ")
     password = input("Por favor, ingrese su contraseña: ")
-    PIN = input("Por favor, ingrese su PIN: ")
+    pin_user = input("Por favor, ingrese su PIN: ")
     
     # Abrimos el JSON de cuentas para obtener la información del usuario con el DNI proporcionado
     with open(r_cuentas, "r", encoding="utf-8") as f:
@@ -295,7 +314,7 @@ def inicio_sesion():
         # En este caso, si el DNI coincide, se comprueba la contraseña como en crearpasswordsJSON
         if elem["DNI"] == DNI:
             secret = bytearray(password, encoding='utf8')
-            key = bytearray(PIN, encoding='utf8')
+            key = bytearray(pin_user, encoding='utf8')
             hash = HMAC.new(key, secret, SHA256)
             hashed_password = hash.hexdigest()
             if elem["password"] == hashed_password:
@@ -322,7 +341,7 @@ def transaccion(user, usuario_a_transferir):
     # Convertimos el dinero a enviar a binario -> es lo mismo que usar bytearray
     bin_dinero = dinero_a_enviar.encode("utf-8")    
     # Creamos el objeto AES con la clave del usuario emisor y el modo CTR (Counter mode) -> más recomendable
-    encriptacion = AES.new(user.get_common_key(), AES.MODE_CTR) 
+    encriptacion = AES.new(user.dese, AES.MODE_CTR) 
     # Encriptamos los datos
     enc_datos = encriptacion.encrypt(bin_dinero)  
     # Creamos el objeto AES con la clave del usuario receptor y el modo CTR (Counter mode) -> más recomendable
