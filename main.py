@@ -8,7 +8,6 @@ from Crypto.Cipher import PKCS1_OAEP            # Funciones para el manejo de la
 from pathlib import Path                        # Función para los paths del JSON
 import sys                                      # Librería usada para la finalización del programa
 
-
 ###################    MANEJO DE JSONS    ###################
 """
 # TODO: Cambiar rutas antes de presentar trabajo
@@ -73,7 +72,6 @@ def cifrado_asimetrico(sym_key):
     Funcion que cifra la clave simétrica con la clave pública del banco
     """
     ####  CIFRADO ASIMÉTRICO  ####
-    sym_key = get_random_bytes(16)                                      # Mensaje que se debe codificar para el cifrado asimétrico -> Clave en bytearray 
     public_rsa = RSA.import_key(open("public_rsa.pem").read())          # Clave pública del banco
     cifrador_rsa = PKCS1_OAEP.new(public_rsa)                           # Cifrador asimétrico
     return cifrador_rsa.encrypt(sym_key.encode())                       # Ciframos la clave simétrica con la clave pública del banco
@@ -321,19 +319,30 @@ def transaccion(user, usuario_a_transferir):
     # Pedimos el dinero de la transacción, que va a ser el mensaje a encriptar
     dinero_a_enviar = input("\nPor favor, ingrese el dinero que desea enviar (formato n.n): ")
     
-    #####    Encriptación de la transacción    ######
+    ##############    ENCRIPTACIÓN TRANSACCIÓN -> SYM/ASYM    ##############
+    
     # Convertimos el dinero a enviar a binario -> es lo mismo que usar bytearray
-    bin_dinero = dinero_a_enviar.encode("utf-8")    
+    bin_dinero = dinero_a_enviar.encode()  
+    # Clave simétrica que se debe codificar para el cifrado asimétrico -> Clave en bytearray   
+    sym_key = get_random_bytes(16)              
     # Creamos el objeto AES con la clave del usuario emisor y el modo CTR (Counter mode) -> más recomendable
-    encriptacion = AES.new(user.descifrazo_asimétrico(), AES.MODE_CTR) 
+    enc_AES = AES.new(sym_key, AES.MODE_CTR) 
     # Encriptamos los datos
-    enc_datos = encriptacion.encrypt(bin_dinero)  
+    enc_sym = enc_AES.encrypt(bin_dinero) 
+    # Encriptamos con asimétrico la clave simétrica
+    enc_asym = cifrado_asimetrico(sym_key)
+    
+    # Desciframos con asimétrico la clave simétrica
+    desenc_asym = descifrado_asimétrico(enc_asym)
     # Creamos el objeto AES con la clave del usuario receptor y el modo CTR (Counter mode) -> más recomendable
-    decriptacion = AES.new(usuario_a_transferir.get_common_key(), AES.MODE_CTR, nonce=encriptacion.nonce)
+    desenc_AES = AES.new(desenc_asym, AES.MODE_CTR, nonce=enc_AES.nonce)
     # Desencriptamos los datos
-    mnsj_bin = decriptacion.decrypt(enc_datos) 
+    mnsj_bin = desenc_AES.decrypt(desenc_asym) 
     # Convertimos el mensaje a string
-    mnsj = mnsj_bin.decode("utf-8")                              
+    mnsj = mnsj_bin.decode("utf-8")  
+    
+    ################    FIN ENCRIPTACIÓN DESENCRIPTACIÓN   ################
+                                
     if mnsj == dinero_a_enviar:
         # Si el mensaje es el mismo, se ha realizado la transacción segura correctamente
         print("\nTransacción protegida correctamente\n")
@@ -384,21 +393,25 @@ validate_pin_bank = False
 asym_keys = RSA.generate(2048)                                                       # Generamos las claves -> 2048 bits -> 256 bytes
 pin_file = open(r_hashed_pin_bank, "r", encoding="utf-8")                            # Abrimos el fichero con el PIN Hasheado
 pin_json = json.load(pin_file)                                                       # Cargamos el JSON
+p_bank = pin_json[0]["pin"]                                                          # Obtenemos el PIN              
+counter = 0                                                                          # Contador para el número de intentos de PIN                                     
 
-for i in range(3):                                                                   # Hacemos 3 intentos para acceder al sistema                             
+while ((not validate_pin_bank) and (counter < 3)):                                  # Hacemos 3 intentos para acceder al sistema                             
     pin_bank = input("Por favor, introduzca el PIN privado del banco: ")             # PIN del banco -> donotshareitwithanyone
-    sha256 = SHA256.new()                                                            # Creamos el objeto SHA256
-    h_pin_bank = sha256.update(pin_bank.encode())                                    # Actualizamos el objeto con el pin del banco
-    if pin_json[0]["pin"] == h_pin_bank.hexdigest():                                 # Comparamos el pin del banco con el del fichero
-            print("\nPIN correcto\n")
-            print("Inicio del programa activado\n")
-            validate_pin_bank = True
+    b_pin_bank = bytearray(pin_bank, encoding='utf8')                                # Convertimos el PIN a bytes
+    h_pin_bank = SHA256.new(data=b_pin_bank)                                         # Creamos el objeto SHA256
+    if p_bank != h_pin_bank.hexdigest():                                             # Comparamos el pin del banco con el del fichero
+        print("\nPIN incorrecto, vuelve a intentarlo\n")     
     else:
-        print("\nPIN incorrecto, vuelve a intentarlo\n")
+        print("\nPIN correcto\n")
+        print("Inicio del programa activado")
+        validate_pin_bank = True
+    counter += 1
+        
 pin_file.close()
 
 if not validate_pin_bank:                                                            # Si no se ha validado el PIN del banco, se sale del programa                 
-    print("\nDemasiados intentos fallidos\n")
+    print("Demasiados intentos fallidos\n")
     print("El programa se cerrará\n")
     ### Cerramos el programa ###
     sys.exit()
