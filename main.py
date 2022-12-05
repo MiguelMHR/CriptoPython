@@ -3,6 +3,7 @@ import json                                     # Libreria para manejar archivos
 from Crypto.Random import get_random_bytes      # Funciones para la generación de clave
 from Crypto.Hash import HMAC, SHA256            # Funciones para el manejo de HMAC
 from Crypto.Cipher import AES                   # Funciones para el manejo de AES
+from base64 import b64encode, b64decode         # Funciones para el manejo del nonce en AES
 from Crypto.PublicKey import RSA                # Funciones de la generación de claves asimétrico
 from Crypto.Cipher import PKCS1_OAEP            # Funciones para el manejo de las claves asimétricos
 from pathlib import Path                        # Función para los paths del JSON
@@ -72,9 +73,12 @@ def cifrado_asimetrico(sym_key):
     Funcion que cifra la clave simétrica con la clave pública del banco
     """
     ####  CIFRADO ASIMÉTRICO  ####
-    public_rsa = RSA.import_key(open("public_rsa.pem").read())          # Clave pública del banco
-    cifrador_rsa = PKCS1_OAEP.new(public_rsa)                           # Cifrador asimétrico
-    return cifrador_rsa.encrypt(sym_key.encode())                       # Ciframos la clave simétrica con la clave pública del banco
+    public_file = open("public_rsa.pem", "rb")              # Abrimos el archivo con la clave pública del banco
+    read_public_file = public_file.read()                   # Leemos el archivo
+    public_rsa = RSA.import_key(read_public_file)           # Clave pública del banco
+    cifrador_rsa = PKCS1_OAEP.new(public_rsa)               # Cifrador asimétrico
+    print("\nEncriptación asimétrica completada")
+    return cifrador_rsa.encrypt(sym_key)                    # Ciframos la clave simétrica con la clave pública del banco
     # Esta clave es la clave simétrica encriptada con cifrado asimétrico -> Clave en bytearray
 
 def descifrado_asimétrico(sym_key_encrypted):
@@ -82,10 +86,13 @@ def descifrado_asimétrico(sym_key_encrypted):
     Funcion que se encarga de descifrar la clave simétrica del usuario con la clave privada del banco
     """
     ####  DESCIFRADO ASIMÉTRICO  ####
-    private_rsa = RSA.import_key(open("private_rsa.pem").read(), passphrase=pin_bank)  # Clave privada del banco
-    descifrador_rsa = PKCS1_OAEP.new(private_rsa)                                      # Descifrador asimétrico
-    msg_key_decrypted = descifrador_rsa.decrypt(sym_key_encrypted)                     # Desciframos la clave simétrica                                                      
-    return (msg_key_decrypted.decode())                                                # Devolvemos la clave simétrica en formato string
+    private_file = open("private_rsa.pem", "rb")                                # Abrimos el archivo con la clave privada del banco
+    read_private_file = private_file.read()                                     # Leemos el archivo
+    private_rsa = RSA.import_key(read_private_file, passphrase=pin_bank)        # Clave privada del banco
+    descifrador_rsa = PKCS1_OAEP.new(private_rsa)                               # Descifrador asimétrico
+    msg_key_decrypted = descifrador_rsa.decrypt(sym_key_encrypted)              # Desciframos la clave simétrica 
+    print("\nDesencriptación asimétrica completada")                                                     
+    return msg_key_decrypted                                                    # Devolvemos la clave simétrica en formato string
     
 
 def dicttoJSON(dict, ruta_json):
@@ -248,12 +255,12 @@ def creacion_cuenta():
     # Invocamos la creación de la contraseña y su seguridad
     if crearpasswordsJSON(DNI):
         # Información final si se ha creado la contraseña correctamente
-        print("\nCuenta creada exitosamente")
-        print("\nInicia sesión para continuar")
+        print("Cuenta creada exitosamente")
+        print("\nInicia sesión para continuar\n")
     else:
         # Si no se han creado bien las contraseñas, se vuelven a pedir la información
-        print("\nNo se ha podido crear la cuenta")	
-        print("\nVuelve a intentarlo")	
+        print("No se ha podido crear la cuenta")	
+        print("\nVuelve a intentarlo\n")	
 
 
 def inicio_sesion():
@@ -322,30 +329,36 @@ def transaccion(user, usuario_a_transferir):
     ##############    ENCRIPTACIÓN TRANSACCIÓN -> SYM/ASYM    ##############
     
     # Convertimos el dinero a enviar a binario -> es lo mismo que usar bytearray
-    bin_dinero = dinero_a_enviar.encode()  
+    bin_dinero = dinero_a_enviar.encode('utf-8')  
     # Clave simétrica que se debe codificar para el cifrado asimétrico -> Clave en bytearray   
     sym_key = get_random_bytes(16)              
     # Creamos el objeto AES con la clave del usuario emisor y el modo CTR (Counter mode) -> más recomendable
     enc_AES = AES.new(sym_key, AES.MODE_CTR) 
     # Encriptamos los datos
-    enc_sym = enc_AES.encrypt(bin_dinero) 
+    enc_sym = enc_AES.encrypt(bin_dinero)
+    print("\nTransacción encriptada con cifrado asimétrico")
+    # Creamos el nonce y el ciphertext para la desencriptación
+    enc_nonce = b64encode(enc_AES.nonce).decode('utf-8')
+    enc_ciphertext = b64encode(enc_sym).decode('utf-8')
     # Encriptamos con asimétrico la clave simétrica
+    print("\nEncriptando clave simétrica con cifrado asimétrico")
     enc_asym = cifrado_asimetrico(sym_key)
-    
     # Desciframos con asimétrico la clave simétrica
     desenc_asym = descifrado_asimétrico(enc_asym)
+    # Desencriptamos el nonce y el ciphertext
+    dec_nonce = b64decode(enc_nonce)
+    dec_ciphertext = b64decode(enc_ciphertext)
     # Creamos el objeto AES con la clave del usuario receptor y el modo CTR (Counter mode) -> más recomendable
-    desenc_AES = AES.new(desenc_asym, AES.MODE_CTR, nonce=enc_AES.nonce)
+    desenc_AES = AES.new(desenc_asym, AES.MODE_CTR, nonce=dec_nonce)
     # Desencriptamos los datos
-    mnsj_bin = desenc_AES.decrypt(desenc_asym) 
-    # Convertimos el mensaje a string
-    mnsj = mnsj_bin.decode("utf-8")  
+    mnsj = desenc_AES.decrypt(dec_ciphertext).decode('utf-8')
+    print("\nTransacción desencriptada con cifrado simétrico") 
     
     ################    FIN ENCRIPTACIÓN DESENCRIPTACIÓN   ################
                                 
     if mnsj == dinero_a_enviar:
         # Si el mensaje es el mismo, se ha realizado la transacción segura correctamente
-        print("\nTransacción protegida correctamente\n")
+        print("\nTransacción protegida correctamente")
         # Realizamos las operaciones de dinero
         if not user.retiro(float(dinero_a_enviar)):
             # Si no se ha podido realizar el retiro, se muestra un mensaje de error
@@ -460,11 +473,18 @@ while(not exit_program):
         exit_program = True
     
     else:
-        print("\nPor favor, seleccione una opción válida")
+        print("\nPor favor, seleccione una opción válida\n")
     
     while(enter_sys):
         # Mientras queramos hacer transacciones, se ejecuta el programa para encontrar al usuario a transferir
-        usuario_a_transferir = input("\nPor favor, ingrese el DNI del usuario al que desea transferir dinero: ")
+        usuario_a_transferir = input("\nPor favor, ingrese el DNI del usuario al que desea transferir dinero (o salir del sistema): ")
+        if usuario_a_transferir == "salir":
+            # Si se selecciona 'salir', se sale del programa y no se entra a las transacciones
+            print("\nGracias por usar el programa\n")
+            enter_sys = False
+            exit_program = True
+            continue
+        
         with open(r_cuentas, "r", encoding="utf-8") as f:
             # Abrimos el JSON de cuentas para encontrar al destinatario
             l_users = json.load(f)
