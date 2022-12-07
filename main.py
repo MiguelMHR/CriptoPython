@@ -328,6 +328,8 @@ def transaccion(user, usuario_a_transferir):
     
     ##############    ENCRIPTACIÓN TRANSACCIÓN -> SYM/ASYM    ##############
     
+    #TODO: firma: https://github.com/JackCloudman/PyCrypto
+    
     # Convertimos el dinero a enviar a binario -> es lo mismo que usar bytearray
     bin_dinero = dinero_a_enviar.encode('utf-8')  
     # Clave simétrica que se debe codificar para el cifrado asimétrico -> Clave en bytearray   
