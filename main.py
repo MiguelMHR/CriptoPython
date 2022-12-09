@@ -29,7 +29,6 @@ r_hashed_pin_bank = home + "\ClonedRepositories\CriptoPython\hashed_pin_bank.jso
 
 # TODO: Crear aquí las claves privada y pública QUE TENDRÁ EL BANCO, mirar foto: https://cutt.ly/n1FyLT3
 # video YT asimétrico + clave pública: https://www.youtube.com/watch?v=apn1BN6XMVo
-# Usar RSA: https://pythondiario.com/2020/07/criptografia-en-python-rsa.html
 # LINK PARA REPORT:
 # https://securityboulevard.com/2020/05/types-of-encryption-5-encryption-algorithms-how-to-choose-the-right-one/
 # ELEGIR EL MEJOR: RSA PUESTO QUE ES EL MÁS USADO Y SIMPLE Y POR LA IMPLEMENTACION CON PKI (ECC ES MÁS SEGURO PERO MENOS USADO)
@@ -110,7 +109,7 @@ def firmar_transaccion(b_msg):
     hashed_b_msg = SHA256.new(b_msg)                                            # Hash del mensaje
     obj_pkcs1 = pkcs1_15.new(private_rsa)                                       # Creamos el objeto para firmar
     signature = obj_pkcs1.sign(hashed_b_msg)                                    # Firma del mensaje
-    return signature                                           # Devolvemos la firma y el hash del mensaje
+    return signature                                                            # Devolvemos la firma y el hash del mensaje
 
 def comprobar_firma(signature, b_msg):
     """Función que comprueba la firma de la transacción con la clave pública del banco"""
@@ -143,7 +142,6 @@ def dicttoJSON(dict, ruta_json):
             json.dump(l_users, f, indent=2)
             f.close()
                 
-
 def validar_param_cuenta(nombre, apellido, dni, dinero):
     """Funcion que valida los parámetros de la cuenta"""
 
@@ -210,7 +208,6 @@ def validar_param_cuenta(nombre, apellido, dni, dinero):
     # Si todo es correcto, devolvemos True
     return True
 
-
 def comprobacion_parametros_password(password, PIN):
     """Función que valida la contraseña y el pin"""
     numeros = ("0","1","2","3","4","5","6","7","8","9")
@@ -232,7 +229,6 @@ def comprobacion_parametros_password(password, PIN):
 
     # si todo es correcto, devolvemos True
     return True
-
 
 def crearpasswordsJSON(dni):
     """Funcion que crea el JSON de contraseñas"""
@@ -260,7 +256,6 @@ def crearpasswordsJSON(dni):
     # Enseñamos al usuario que se ha creado correctamente las contraseñas
     print("\nContraseña creada con éxito\n")
     return True
-
 
 def creacion_cuenta():
     """
@@ -291,7 +286,6 @@ def creacion_cuenta():
         # Si no se han creado bien las contraseñas, se vuelven a pedir la información
         print("No se ha podido crear la cuenta")	
         print("\nVuelve a intentarlo\n")	
-
 
 def inicio_sesion():
     """
@@ -347,8 +341,7 @@ def inicio_sesion():
     # Retornamos el usuario y un booleano que indica si se ha logueado
     l_results = [user, password_found]
     return l_results
-   
-     
+       
 def transaccion(user, usuario_a_transferir):
     """
     Funcion que se encarga de realizar la transaccion
@@ -447,7 +440,7 @@ pin_json = json.load(pin_file)                                                  
 p_bank = pin_json[0]["pin"]                                                          # Obtenemos el PIN              
 counter = 0                                                                          # Contador para el número de intentos de PIN                                     
 
-while ((not validate_pin_bank) and (counter < 3)):                                  # Hacemos 3 intentos para acceder al sistema                             
+while ((not validate_pin_bank) and (counter < 3)):                                   # Hacemos 3 intentos para acceder al sistema                             
     pin_bank = input("Por favor, introduzca el PIN privado del banco: ")             # PIN del banco -> donotshareitwithanyone
     b_pin_bank = bytearray(pin_bank, encoding='utf8')                                # Convertimos el PIN a bytes
     h_pin_bank = SHA256.new(data=b_pin_bank)                                         # Creamos el objeto SHA256
