@@ -24,6 +24,9 @@ r_passwords = home + "\ClonedRepositories\CriptoPython\contraseñas.json"       
 # Se ha creado un archivo PEM con el pin del Banco hasheado con SHA256 fuera de este archivo como medida de seguridad
 r_hashed_pin_bank = home + "\ClonedRepositories\CriptoPython\hashed_pin_bank.json"   # Ruta raw del JSON con el PIN del Banco hasheado
 
+# Ruta con el archivo PEM de la clave privada de A y el certificado de A sacado de la PKI
+r_priv_a = home + "\ClonedRepositories\CriptoPython\A\Akey.pem"
+r_cert_a = home + "\ClonedRepositories\CriptoPython\A\Acert.pem" # Ruta raw del archivo PEM de la clave privada de A
 
 ###################     CLASE USER, MÉTODOS ASOCIADOS Y FUNCIONES EXTERNAS   ########################
 
@@ -103,9 +106,9 @@ def descifrado_asimétrico(sym_key_encrypted):
 
 def firmar_transaccion(b_msg):
     """Función que firma la transacción cifrada con AES con la clave privada del banco"""
-    private_file = open("private_rsa.pem", "rb")                                # Abrimos el archivo con la clave privada del banco
+    private_file = open(r_priv_a, "rb")                                # Abrimos el archivo con la clave privada del banco
     read_private_file = private_file.read()                                     # Leemos el archivo
-    private_rsa = RSA.import_key(read_private_file, passphrase=pin_bank)        # Clave privada del banco
+    private_rsa = RSA.import_key(read_private_file)        # Clave privada del banco
     hashed_b_msg = SHA256.new(b_msg)                                            # Hash del mensaje
     obj_pkcs1 = pkcs1_15.new(private_rsa)                                       # Creamos el objeto para firmar
     signature = obj_pkcs1.sign(hashed_b_msg)                                    # Firma del mensaje
@@ -113,7 +116,7 @@ def firmar_transaccion(b_msg):
 
 def comprobar_firma(signature, b_msg):
     """Función que comprueba la firma de la transacción con la clave pública del banco"""
-    public_file = open("public_rsa.pem", "rb")              # Abrimos el archivo con la clave pública del banco
+    public_file = open(r_cert_a, "rb")              # Abrimos el archivo con la clave pública del banco
     read_public_file = public_file.read()                   # Leemos el archivo
     public_rsa = RSA.import_key(read_public_file)           # Clave pública del banco
     hashed_b_msg = SHA256.new(b_msg)                        # Hash del mensaje
