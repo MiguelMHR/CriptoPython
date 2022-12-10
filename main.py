@@ -108,7 +108,7 @@ def firmar_transaccion(b_msg):
     """Función que firma la transacción cifrada con AES con la clave privada del banco"""
     private_file = open(r_priv_a, "rb")                                # Abrimos el archivo con la clave privada del banco
     read_private_file = private_file.read()                                     # Leemos el archivo
-    private_rsa = RSA.import_key(read_private_file)        # Clave privada del banco
+    private_rsa = RSA.import_key(read_private_file, passphrase=input("\nescribe contraseña de firma: "))        # Clave privada del banco
     hashed_b_msg = SHA256.new(b_msg)                                            # Hash del mensaje
     obj_pkcs1 = pkcs1_15.new(private_rsa)                                       # Creamos el objeto para firmar
     signature = obj_pkcs1.sign(hashed_b_msg)                                    # Firma del mensaje
