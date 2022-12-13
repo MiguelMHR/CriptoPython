@@ -107,7 +107,7 @@ def firmar_transaccion(b_msg):
     hashed_b_msg = SHA256.new(b_msg)                                            # Hasheamos el mensaje
     obj_pkcs1 = pkcs1_15.new(private_rsa)                                       # Creamos el objeto para firmar
     signature = obj_pkcs1.sign(hashed_b_msg)                                    # Firmamos del mensaje
-    print("\nTransacción firmada")                                              # Imprimimos que la transacción ha sido firmada
+    print("\nTransacción encriptada firmada")                                              # Imprimimos que la transacción ha sido firmada
     private_file.close()                                                        # Cerramos el archivo
     return signature                                                            # Devolvemos la firma
 
@@ -383,7 +383,7 @@ def transaccion(user, usuario_a_transferir):
     enc_AES = AES.new(sym_key, AES.MODE_CTR) 
     # Encriptamos los datos
     enc_sym = enc_AES.encrypt(bin_dinero)
-    print("\nTransacción encriptada con cifrado asimétrico") 
+    print("\nEncriptada transacción con cifrado simétrico")
     # Firmamos la transacción encriptada con AES
     signed_transaction = firmar_transaccion(enc_sym)   
     # Creamos el nonce y el ciphertext para la desencriptación
@@ -437,7 +437,7 @@ def transaccion(user, usuario_a_transferir):
         print("\nTransacción realizada correctamente")
     else:
         # Si el mensaje no es el mismo, se ha producido un error en la encriptación
-        print("\nError en la transacción")
+        print("\nError en la transacción - no protegida")
         return
 
 
@@ -492,7 +492,7 @@ with open("private_rsa.pem", "wb") as f:
     f.write(private_rsa)
     f.close()
 
-# Exportación d ela clave pública en formato PEM
+# Exportación de la clave pública en formato PEM
 public_rsa = asym_keys.publickey().export_key()
 with open("public_rsa.pem", "wb") as f:
     f.write(public_rsa)
