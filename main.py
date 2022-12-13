@@ -1,59 +1,52 @@
 ###################     LIBRERIAS USADAS    #####################
+
+
 import json                                           # Libreria para manejar archivos JSON
-from Crypto.Random import get_random_bytes            # Funciones para la generación de clave
-from Crypto.Hash import HMAC, SHA256                  # Funciones para el manejo de HMAC y SHA 
-from Crypto.Cipher import AES                         # Funciones para el manejo de AES
+from Crypto.Random import get_random_bytes            # Funciones para la generación de clave simétrica
+from Crypto.Hash import HMAC, SHA256                  # Funciones para el manejo de funciones hash
+from Crypto.Cipher import AES                         # Funciones para el manejo de cifrado simétrico
 from Crypto.Signature import pkcs1_15                 # Funciones para el manejo de la firma digital
-from base64 import b64encode, b64decode               # Funciones para el manejo del nonce en AES
+from base64 import b64encode, b64decode               # Funciones para el manejo del nonce en AES con modo CTR
 from Crypto.PublicKey import RSA                      # Funciones de la generación de claves asimétrico
-from Crypto.Cipher import PKCS1_OAEP                  # Funciones para el manejo de las claves asimétricos
-from pathlib import Path                              # Función para los paths del JSON
+from Crypto.Cipher import PKCS1_OAEP                  # Funciones para el manejo del cifrado asimétrico
+from pathlib import Path                              # Función para los paths del JSON y de los archivos PEM
 import sys                                            # Librería usada para la finalización del programa
 
+
 ###################    MANEJO DE JSONS    ###################
+
+
 """
-# TODO: Cambiar rutas antes de presentar trabajo
 CUIDADO, esta ruta está definida para nuestro equipo
 para que funcione en su equipo, debe cambiarlo a su ruta absoluta de los JSON en
 r_cuentas y en r_passwords
 """
+
+# Se han creado 2 JSONs para el manejo de las cuentas de los usuarios y sus contraseñas protegidas
 home = str(Path.home())
 r_cuentas = home + "\ClonedRepositories\CriptoPython\cuentas.json"                   # Ruta raw del JSON de cuentas de usuarios
 r_passwords = home + "\ClonedRepositories\CriptoPython\contraseñas.json"             # Ruta raw del JSON de contraseñas
 
-# Se ha creado un archivo PEM con el pin del Banco hasheado con SHA256 fuera de este archivo como medida de seguridad
-r_hashed_pin_bank = home + "\ClonedRepositories\CriptoPython\hashed_pin_bank.json"   # Ruta raw del JSON con el PIN del Banco hasheado
+# Se ha creado un archivo JSON con el pin del banco hasheado con SHA256 fuera de este archivo como medida de seguridad
+r_hashed_pin_bank = home + "\ClonedRepositories\CriptoPython\hashed_pin_bank.json"   # Ruta raw del JSON con el PIN del banco hasheado
 
 # Ruta con el archivo PEM de la clave privada de A y el certificado de A sacado de la PKI
-r_priv_a = home + "\ClonedRepositories\CriptoPython\A\Akey.pem"
-r_cert_a = home + "\ClonedRepositories\CriptoPython\A\Acert.pem" # Ruta raw del archivo PEM de la clave privada de A
+r_priv_a = home + "\ClonedRepositories\CriptoPython\A\Akey.pem"                      # Ruta raw del archivo PEM de la clave privada de A
+r_cert_a = home + "\ClonedRepositories\CriptoPython\A\Acert.pem"                     # Ruta raw del archivo PEM del certificado (clave pública) de A
+
 
 ###################     CLASE USER, MÉTODOS ASOCIADOS Y FUNCIONES EXTERNAS   ########################
-
-# TODO: Crear aquí las claves privada y pública QUE TENDRÁ EL BANCO, mirar foto: https://cutt.ly/n1FyLT3
-# video YT asimétrico + clave pública: https://www.youtube.com/watch?v=apn1BN6XMVo
-# LINK PARA REPORT:
-# https://securityboulevard.com/2020/05/types-of-encryption-5-encryption-algorithms-how-to-choose-the-right-one/
-# ELEGIR EL MEJOR: RSA PUESTO QUE ES EL MÁS USADO Y SIMPLE Y POR LA IMPLEMENTACION CON PKI (ECC ES MÁS SEGURO PERO MENOS USADO)
-#TODO: firma: https://github.com/JackCloudman/PyCrypto
-
-# DATO CURIOSO: PKCS#1 OAEP does not guarantee authenticity of the message you decrypt. 
-# Since the public key is not secret, everybody could have created the encrypted message. 
-# Asymmetric encryption is typically paired with a digital signature.
-
-# RAZONES PARA USAR PKCS_V1.5 en vez de PSS: https://www.cryptosys.net/pki/manpki/pki_rsaschemes.html (punto 4 y 5 de diferencias)
     
-
+    
 class User():
     """
     Clase para crear un usuario
-    User: Nombre, Apellido, DNI, dinero
     """
-       
+    
     def __init__(self, nombre, apellido, DNI, dinero):
         self.nombre = nombre                                  # Nombre -> string sin espacios con el primer caracter en mayúscula                 
         self.apellido = apellido                              # Apellido -> string sin espacios con el primer caracter en mayúscula
-        self.DNI = DNI                                        # DNI -> string de 8 caracteres integers con el último caracter en mayúscula
+        self.DNI = DNI                                        # DNI -> string de 8 caracteres integers con el último caracter en mayúscula (específico)
         self.dinero = float(dinero)                           # Dinero -> float positivo 
 
     def ingreso(self, dinero):
@@ -70,61 +63,68 @@ class User():
             self.dinero -= dinero
             return True
         else:
-            print("No tiene suficiente dinero en su cuenta")
+            print("\nNo tiene suficiente dinero en su cuenta")
             return False	
     
     def classtodict(self):
         """Funcion que convierte la clase en un diccionario"""
-        return {"nombre": self.nombre, "apellido": self.apellido, "DNI": self.DNI}
+        return {"nombre": self.nombre, "apellido": self.apellido, "DNI": self.DNI, "dinero": self.dinero}
 
 def cifrado_asimetrico(sym_key):
     """
     Funcion que cifra la clave simétrica con la clave pública del banco
     """
-    ####  CIFRADO ASIMÉTRICO  ####
+    ####?  CIFRADO ASIMÉTRICO  ####
     public_file = open("public_rsa.pem", "rb")              # Abrimos el archivo con la clave pública del banco
     read_public_file = public_file.read()                   # Leemos el archivo
-    public_rsa = RSA.import_key(read_public_file)           # Clave pública del banco
-    cifrador_rsa = PKCS1_OAEP.new(public_rsa)               # Cifrador asimétrico
-    print("\nEncriptación asimétrica completada")
+    public_rsa = RSA.import_key(read_public_file)           # Importamos la clave pública del banco
+    cifrador_rsa = PKCS1_OAEP.new(public_rsa)               # Creamos el objeto del cifrado asimétrico
+    print("\nEncriptación asimétrica completada")           # Mensaje de confirmación
     public_file.close()                                     # Cerramos el archivo
-    return cifrador_rsa.encrypt(sym_key)                    # Ciframos la clave simétrica con la clave pública del banco
+    return cifrador_rsa.encrypt(sym_key)                    # Ciframos la clave simétrica con la clave pública del banco y la devolvemos
 
 def descifrado_asimétrico(sym_key_encrypted):
     """
     Funcion que se encarga de descifrar la clave simétrica del usuario con la clave privada del banco
     """
-    ####  DESCIFRADO ASIMÉTRICO  ####
+    ####?  DESCIFRADO ASIMÉTRICO  ####
     private_file = open("private_rsa.pem", "rb")                                # Abrimos el archivo con la clave privada del banco
     read_private_file = private_file.read()                                     # Leemos el archivo
-    private_rsa = RSA.import_key(read_private_file, passphrase=pin_bank)        # Clave privada del banco
-    descifrador_rsa = PKCS1_OAEP.new(private_rsa)                               # Descifrador asimétrico
+    private_rsa = RSA.import_key(read_private_file, passphrase=pin_bank)        # Importamos la clave privada del banco
+    descifrador_rsa = PKCS1_OAEP.new(private_rsa)                               # Creamos el objeto para el descifrado asimétrico
     msg_key_decrypted = descifrador_rsa.decrypt(sym_key_encrypted)              # Desciframos la clave simétrica 
-    print("\nDesencriptación asimétrica completada")                                 
+    print("\nDesencriptación asimétrica completada")                            # Mensaje de confirmación     
     private_file.close()                                                        # Cerramos el archivo                      
     return msg_key_decrypted                                                    # Devolvemos la clave simétrica en formato string
 
 def firmar_transaccion(b_msg):
     """Función que firma la transacción cifrada con AES con la clave privada del banco"""
-    private_file = open(r_priv_a, "rb")                                # Abrimos el archivo con la clave privada del banco
+    ####? FIRMA DEL MENSAJE ####
+    private_file = open(r_priv_a, "rb")                                         # Abrimos el archivo de la clave privada de A
     read_private_file = private_file.read()                                     # Leemos el archivo
-    private_rsa = RSA.import_key(read_private_file, passphrase=input("\nescribe contraseña de firma: "))        # Clave privada del banco
-    hashed_b_msg = SHA256.new(b_msg)                                            # Hash del mensaje
+    sign_pass = input("\nEscribe contraseña de firma: ")                        # Pedimos la contraseña de firma
+    private_rsa = RSA.import_key(read_private_file, passphrase=sign_pass)       # Obtenemos clave introduciendo la contraseña de firma   
+    hashed_b_msg = SHA256.new(b_msg)                                            # Hasheamos el mensaje
     obj_pkcs1 = pkcs1_15.new(private_rsa)                                       # Creamos el objeto para firmar
-    signature = obj_pkcs1.sign(hashed_b_msg)                                    # Firma del mensaje
-    return signature                                                            # Devolvemos la firma y el hash del mensaje
+    signature = obj_pkcs1.sign(hashed_b_msg)                                    # Firmamos del mensaje
+    print("\nTransacción firmada")                                              # Imprimimos que la transacción ha sido firmada
+    private_file.close()                                                        # Cerramos el archivo
+    return signature                                                            # Devolvemos la firma
 
-def comprobar_firma(signature, b_msg):
+def validar_firma(signature, b_msg):
     """Función que comprueba la firma de la transacción con la clave pública del banco"""
-    public_file = open(r_cert_a, "rb")              # Abrimos el archivo con la clave pública del banco
-    read_public_file = public_file.read()                   # Leemos el archivo
-    public_rsa = RSA.import_key(read_public_file)           # Clave pública del banco
-    hashed_b_msg = SHA256.new(b_msg)                        # Hash del mensaje
+    ####? VALIDACIÓN DE FIRMA  ####
+    public_file = open(r_cert_a, "rb")                          # Abrimos el archivo con la clave pública del banco
+    read_public_file = public_file.read()                       # Leemos el archivo
+    public_rsa = RSA.import_key(read_public_file)               # Clave pública del banco
+    hashed_b_msg = SHA256.new(b_msg)                            # Hash del mensaje
     try:
-        obj_pkcs1 = pkcs1_15.new(public_rsa)
+        obj_pkcs1 = pkcs1_15.new(public_rsa)                    # Si esto funciona, la firma es validada
         signature = obj_pkcs1.verify(hashed_b_msg, signature)
+        public_file.close()
         return True
-    except (ValueError, TypeError):
+    except (ValueError, TypeError):                             # Si no se valida correctamente con .verify, la firma no es válida
+        public_file.close()
         return False
 
 def dicttoJSON(dict, ruta_json):
@@ -148,12 +148,14 @@ def dicttoJSON(dict, ruta_json):
 def validar_param_cuenta(nombre, apellido, dni, dinero):
     """Funcion que valida los parámetros de la cuenta"""
 
+
     # Cadenas comparativas de caracteres
     letras_min = ("a","b","c","d","e","f","g","h","i","j","k", "l","m","n","ñ","o","p","q","r","s","t","u","v","w","x","y","z")
     letras_mayus = ("A","B","C","D","E","F","G","H","I","J","K","L","M","N","Ñ","O","P","Q","R","S","T","U","V","W","X","Y","Z")
     numeros_y_punto = ("0","1","2","3","4","5","6","7","8","9",".")
     numeros_DNI = ("0","1","2","3","4","5","6","7","8","9")
     dni_letras = ("T","R","W","A","G","M","Y","F","P","D","X","B","N","J","Z","S","Q","V","H","L","C","K","E")
+    
     
     # Bucle de comprobación de nombre
     for i in range(len(nombre)):
@@ -166,15 +168,18 @@ def validar_param_cuenta(nombre, apellido, dni, dinero):
         print("Nombre no válido")
         return False
 
+
     # Bucle de comprobación de apellido
-    for elem in apellido:
+    for i in range(len(apellido)):
         if ((apellido[i] not in letras_min) and (apellido[i] not in letras_mayus)) or (elem == " "):
             print("Apellido no válido")
             return False
+        
     # validación del apellido
     if (len(apellido) == 0) or (apellido[0].islower()):
         print("Apellido no válido")
         return False
+    
     
     # Bucle de comprobación de DNI
     for i in range(len(dni)):
@@ -186,10 +191,12 @@ def validar_param_cuenta(nombre, apellido, dni, dinero):
             if dni[i] not in numeros_DNI:
                 print("DNI no válido")
                 return False
+    
     # validación del DNI
     if (len(dni) != 9):
         print("DNI no valido")
         return False
+
 
     # Bucle para comprobar que solo hay un punto en el dinero
     counter_puntos = 0
@@ -208,39 +215,47 @@ def validar_param_cuenta(nombre, apellido, dni, dinero):
         print("Dinero no válido")
         return False
 
+
     # Si todo es correcto, devolvemos True
     return True
 
-def comprobacion_parametros_password(password, PIN):
+def validar_param_password(password, PIN):
     """Función que valida la contraseña y el pin"""
+    
     numeros = ("0","1","2","3","4","5","6","7","8","9")
+    
     
     # Bucle de validación de PIN
     for elem in PIN:
         if elem not in numeros:
             print("PIN no válido")
             return False
+    
     # validación del PIN
     if (len(PIN) != 8):
         print("El PIN no es válido")
         return False
+
 
     # validación de la contraseña
     if len(password) == 0:
         print("La contraseña no es válida")
         return False
 
+
     # si todo es correcto, devolvemos True
     return True
 
 def crearpasswordsJSON(dni):
     """Funcion que crea el JSON de contraseñas"""
+    
     # Recogida de datos inicial con la interacción de la terminal
     print("\nSección de seguridad\n")
     password = input("Por favor, ingrese su contraseña: ")                    # A la contraseña se le aplica un Hash
     pin_user = input("Por favor, ingrese su PIN (8 dígitos numéricos): ")     # Permitirá iniciar sesión - 8 digitos
+    
     # Si los parámetros no son válidos, devolvemos False
-    if not comprobacion_parametros_password(password, pin_user):
+    if not validar_param_password(password, pin_user):
         print("No se han podido crear los datos de seguridad")
         return False
     
@@ -265,12 +280,14 @@ def creacion_cuenta():
     Funcion que crea una cuenta de usuario
     y guarda la infomación en un JSON de cuentas del sistema
     """
+    
     # Recogida de datos inicial con la interacción de la terminal
     print("\nBienvenido a la sección de creacion de cuentas\n")
     nombre = input("Por favor, ingrese su nombre: ")
     apellido = input("Por favor, ingrese su apellido: ")
     DNI = input("Por favor, ingrese su DNI: ")
     dinero = input("Por favor, ingrese el dinero que desea depositar (formato n.n): ")
+    
     # Si los datos introducidos son erroneos, se vuelve a pedir la información
     if not validar_param_cuenta(nombre, apellido, DNI, dinero):
         print("No se ha podido crear la cuenta")
@@ -278,11 +295,11 @@ def creacion_cuenta():
 
     # Si todo está bien, Creamos el usuario con los datos obtenidos
     usuario = User(nombre, apellido, DNI, dinero)
-    # Lo pasamos al JSON de cuentas.json
-    dicttoJSON(usuario.classtodict(),r_cuentas)
     # Invocamos la creación de la contraseña y su seguridad
     if crearpasswordsJSON(DNI):
         # Información final si se ha creado la contraseña correctamente
+        # Lo pasamos al JSON de cuentas.json
+        dicttoJSON(usuario.classtodict(),r_cuentas)
         print("Cuenta creada exitosamente")
         print("\nInicia sesión para continuar\n")
     else:
@@ -295,6 +312,7 @@ def inicio_sesion():
     Funcion que se encarga del iniciar sesion
     Retorna el usuario que se logueó obteniendo la información del JSON de cuentas.json
     """
+    
     # Recogida de datos inicial con interacción de la terminal
     print("\nBienvenido a la sección de inicio de sesión\n")
     DNI = input("Por favor, ingrese su DNI: ")
@@ -341,6 +359,7 @@ def inicio_sesion():
         print("\nContraseña o PIN incorrecto")
         l_results = [None, False]
         return l_results
+    
     # Retornamos el usuario y un booleano que indica si se ha logueado
     l_results = [user, password_found]
     return l_results
@@ -349,22 +368,24 @@ def transaccion(user, usuario_a_transferir):
     """
     Funcion que se encarga de realizar la transaccion
     """
+    
     # Pedimos el dinero de la transacción, que va a ser el mensaje a encriptar
     dinero_a_enviar = input("\nPor favor, ingrese el dinero que desea enviar (formato n.n): ")
     
-    ##############    ENCRIPTACIÓN TRANSACCIÓN -> SYM/ASYM    ##############
+    
+    ##############    ENCRIPTACIÓN DESENCRIPTACIÓN TRANSACCIÓN -> SYM/ASYM/FIRMA    ##############
     
     # Convertimos el dinero a enviar a binario -> es lo mismo que usar bytearray
     bin_dinero = dinero_a_enviar.encode('utf-8')  
     # Clave simétrica que se debe codificar para el cifrado asimétrico -> Clave en bytearray   
-    sym_key = get_random_bytes(16)   
-    # Firmamos la transacción encriptada con AES
-    signed_transaction = firmar_transaccion(bin_dinero)        
+    sym_key = get_random_bytes(16)          
     # Creamos el objeto AES con la clave del usuario emisor y el modo CTR (Counter mode) -> más recomendable
     enc_AES = AES.new(sym_key, AES.MODE_CTR) 
     # Encriptamos los datos
     enc_sym = enc_AES.encrypt(bin_dinero)
-    print("\nTransacción encriptada con cifrado asimétrico")   
+    print("\nTransacción encriptada con cifrado asimétrico") 
+    # Firmamos la transacción encriptada con AES
+    signed_transaction = firmar_transaccion(enc_sym)   
     # Creamos el nonce y el ciphertext para la desencriptación
     enc_nonce = b64encode(enc_AES.nonce).decode('utf-8')
     enc_ciphertext = b64encode(enc_sym).decode('utf-8')
@@ -373,20 +394,20 @@ def transaccion(user, usuario_a_transferir):
     enc_asym = cifrado_asimetrico(sym_key)
     # Desciframos con asimétrico la clave simétrica
     desenc_asym = descifrado_asimétrico(enc_asym)
-    # Desencriptamos el nonce y el ciphertext
-    dec_nonce = b64decode(enc_nonce)
-    dec_ciphertext = b64decode(enc_ciphertext)
-    # Creamos el objeto AES con la clave del usuario receptor y el modo CTR (Counter mode) -> más recomendable
-    desenc_AES = AES.new(desenc_asym, AES.MODE_CTR, nonce=dec_nonce)
-    # Desencriptamos los datos
-    mnsj = desenc_AES.decrypt(dec_ciphertext).decode('utf-8')
     # Comprobamos la firma de la transacción encriptada con AES
-    good_signature = comprobar_firma(signed_transaction, bin_dinero) 
+    good_signature = validar_firma(signed_transaction, enc_sym)
     if good_signature:
         print("\nFirma verificada correctamente")
     else:
         print("\nFirma no verificada, se cerrará el programa")
         sys.exit()
+    # Desencriptamos el nonce y el ciphertext
+    dec_nonce = b64decode(enc_nonce)
+    dec_ciphertext = b64decode(enc_ciphertext)
+    # Creamos el objeto AES con la clave del usuario receptor y el modo CTR (Counter mode) -> más recomendable
+    desenc_AES = AES.new(desenc_asym, AES.MODE_CTR, nonce=dec_nonce)
+    # Desencriptamos el mensaje de transferencia con lo descifrado por el asimétrico y lo decodificamos a utf-8
+    mnsj = desenc_AES.decrypt(dec_ciphertext).decode('utf-8') 
     print("\nTransacción desencriptada con cifrado simétrico")
     
     ################    FIN ENCRIPTACIÓN DESENCRIPTACIÓN   ################
@@ -441,10 +462,11 @@ asym_keys = RSA.generate(2048)                                                  
 pin_file = open(r_hashed_pin_bank, "r", encoding="utf-8")                            # Abrimos el fichero con el PIN Hasheado
 pin_json = json.load(pin_file)                                                       # Cargamos el JSON
 p_bank = pin_json[0]["pin"]                                                          # Obtenemos el PIN              
+
 counter = 0                                                                          # Contador para el número de intentos de PIN                                     
 
 while ((not validate_pin_bank) and (counter < 3)):                                   # Hacemos 3 intentos para acceder al sistema                             
-    pin_bank = input("Por favor, introduzca el PIN privado del banco: ")             # PIN del banco -> donotshareitwithanyone
+    pin_bank = input("Por favor, introduzca el PIN privado del banco: ")             # PIN del banco
     b_pin_bank = bytearray(pin_bank, encoding='utf8')                                # Convertimos el PIN a bytes
     h_pin_bank = SHA256.new(data=b_pin_bank)                                         # Creamos el objeto SHA256
     if p_bank != h_pin_bank.hexdigest():                                             # Comparamos el pin del banco con el del fichero
@@ -454,7 +476,6 @@ while ((not validate_pin_bank) and (counter < 3)):                              
         print("Inicio del programa activado")
         validate_pin_bank = True
     counter += 1
-        
 pin_file.close()
 
 if not validate_pin_bank:                                                            # Si no se ha validado el PIN del banco, se sale del programa                 
@@ -464,15 +485,19 @@ if not validate_pin_bank:                                                       
     sys.exit()
 
                                                                                                                                                                                                                
-# Después de validar el PIN del banco, se comienza la exportación de las claves
+# Después de validar el PIN del banco, se comienza la exportación de las claves asimétricas
+# Exportación de la clave privada en formato PEM con una contraseña
 private_rsa = asym_keys.export_key(passphrase=pin_bank)
 with open("private_rsa.pem", "wb") as f:
     f.write(private_rsa)
     f.close()
+
+# Exportación d ela clave pública en formato PEM
 public_rsa = asym_keys.publickey().export_key()
 with open("public_rsa.pem", "wb") as f:
     f.write(public_rsa)
     f.close()
+
 
 ###############         COMIENZA LA EJECUCIÓN DE LA BANCA         ###############
 while(not exit_program):
