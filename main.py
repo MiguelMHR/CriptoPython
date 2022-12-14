@@ -107,7 +107,7 @@ def firmar_transaccion(b_msg):
     hashed_b_msg = SHA256.new(b_msg)                                            # Hasheamos el mensaje
     obj_pkcs1 = pkcs1_15.new(private_rsa)                                       # Creamos el objeto para firmar
     signature = obj_pkcs1.sign(hashed_b_msg)                                    # Firmamos del mensaje
-    print("\nTransacción encriptada firmada")                                              # Imprimimos que la transacción ha sido firmada
+    print("\clave encriptada firmada")                                              # Imprimimos que la transacción ha sido firmada
     private_file.close()                                                        # Cerramos el archivo
     return signature                                                            # Devolvemos la firma
 
@@ -171,7 +171,7 @@ def validar_param_cuenta(nombre, apellido, dni, dinero):
 
     # Bucle de comprobación de apellido
     for i in range(len(apellido)):
-        if ((apellido[i] not in letras_min) and (apellido[i] not in letras_mayus)) or (elem == " "):
+        if ((apellido[i] not in letras_min) and (apellido[i] not in letras_mayus)) or (apellido[i] == " "):
             print("Apellido no válido")
             return False
         
@@ -384,23 +384,23 @@ def transaccion(user, usuario_a_transferir):
     # Encriptamos los datos
     enc_sym = enc_AES.encrypt(bin_dinero)
     print("\nEncriptada transacción con cifrado simétrico")
-    # Firmamos la transacción encriptada con AES
-    signed_transaction = firmar_transaccion(enc_sym)   
     # Creamos el nonce y el ciphertext para la desencriptación
     enc_nonce = b64encode(enc_AES.nonce).decode('utf-8')
     enc_ciphertext = b64encode(enc_sym).decode('utf-8')
     # Encriptamos con asimétrico la clave simétrica
     print("\nEncriptando clave simétrica con cifrado asimétrico")
     enc_asym = cifrado_asimetrico(sym_key)
-    # Desciframos con asimétrico la clave simétrica
-    desenc_asym = descifrado_asimétrico(enc_asym)
-    # Comprobamos la firma de la transacción encriptada con AES
-    good_signature = validar_firma(signed_transaction, enc_sym)
+    # Firmamos la clave simétrica para el cifrado asimétrico
+    signed_transaction = firmar_transaccion(enc_asym)   
+    # Comprobamos la firma de la clave simétrica para el asimétrico
+    good_signature = validar_firma(signed_transaction, enc_asym)
     if good_signature:
         print("\nFirma verificada correctamente")
     else:
         print("\nFirma no verificada, se cerrará el programa")
         sys.exit()
+    # Desciframos con asimétrico la clave simétrica
+    desenc_asym = descifrado_asimétrico(enc_asym)
     # Desencriptamos el nonce y el ciphertext
     dec_nonce = b64decode(enc_nonce)
     dec_ciphertext = b64decode(enc_ciphertext)
